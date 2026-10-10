@@ -1,44 +1,113 @@
-#8-Bit Computer in Verilog --- RTL Design and FPGA Implementation
-1. Project Overview
-This project implements a custom 8-bit computer using Verilog HDL. It is
-inspired by SAP-style educational CPU architectures and is built from
-modular datapath components controlled by a multi-cycle finite-state
-machine (FSM).
-The design focuses on understanding how a processor fetches
-instructions, decodes opcodes, transfers data between registers,
-performs ALU operations, accesses RAM, and controls program flow.
-Key specifications
-Feature	Implementation
-HDL	Verilog
-Datapath width	8 bits
-Program counter width	4 bits
-Memory address width	4 bits
-RAM organization	16 × 8 bits
-Instruction width	8 bits
-Opcode	Instruction bits `[7:4]`
-Operand	Instruction bits `[3:0]`
-Internal data path	Shared 8-bit bus
-Control	Multi-cycle FSM / T-state sequencing
-FPGA clock	100 MHz board clock, divided for slower CPU execution
-Output	Four-digit seven-segment display controller
-Program initialization	RAM initialized from a `.mem` file using `$readmemb`
-> **Implementation note:** This document reflects the project details
-> discussed so far. Confirm the signal behavior and exact FSM
-> transitions against the current RTL before treating the tables as a
-> cycle-accurate specification.
-2. Architecture
-The CPU is divided into a datapath and a control unit.
-Datapath: PC, MAR, RAM, IR, A register, B register, ALU, flags,
-input register, output register, and shared bus.
-Control unit: Decodes the current instruction and FSM state,
-then asserts control signals over dedicated wires.
-Shared data bus: Carries 8-bit data between components. Control
-signals are separate wires; they do not travel through the data bus.
-Clock divider: Produces a slower clock for observing instruction
-execution on hardware.
-Display logic: Converts the output-register value to decimal
-digits and drives the seven-segment display.
-Conceptual data flow
+<p align="center">
+  <img src="images/banner/project_banner.png" alt="8-Bit Computer Banner" width="100%">
+</p>
+
+<h1 align="center">8-Bit Computer in Verilog</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/HDL-Verilog-blue" alt="Verilog">
+  <img src="https://img.shields.io/badge/ISA-16%20Instructions-success" alt="ISA">
+  <img src="https://img.shields.io/badge/Architecture-SAP--Inspired-purple" alt="SAP-inspired">
+  <img src="https://img.shields.io/badge/FPGA-Xilinx%20Spartan--7-orange" alt="FPGA">
+  <img src="https://img.shields.io/badge/Board-Real%20Digital%20Boolean-lightgrey" alt="Board">
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+</p>
+
+<p align="center">
+  A custom 8-bit accumulator computer with a shared bus, a multi-cycle FSM control unit, and a seven-segment output, written in Verilog and built for FPGA.
+</p>
+
+---
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Project Highlights](#project-highlights)
+- [Specifications](#specifications)
+- [Architecture Overview](#architecture-overview)
+- [Instruction Set Architecture (ISA)](#instruction-set-architecture-isa)
+- [Control Signals](#control-signals)
+- [Instruction Execution (T-States)](#instruction-execution-t-states)
+- [ALU and Flags](#alu-and-flags)
+- [RTL Module Structure](#rtl-module-structure)
+- [RAM and Program Initialization](#ram-and-program-initialization)
+- [Clocking and Reset](#clocking-and-reset)
+- [Example Program: Fibonacci](#example-program-fibonacci)
+- [Simulation and Verification](#simulation-and-verification)
+- [FPGA Implementation](#fpga-implementation)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Future Improvements](#future-improvements)
+- [Authors](#authors)
+- [License](#license)
+
+---
+
+## Project Overview
+
+This project implements a custom 8-bit computer in Verilog HDL. It is inspired by SAP (Simple-As-Possible) style educational CPUs and is built from small, modular datapath components sequenced by a multi-cycle finite-state machine (FSM).
+
+The goal is to show how a processor actually works: fetching instructions, decoding opcodes, moving data between registers over a shared bus, performing ALU operations, accessing RAM, and controlling program flow.
+
+> [!NOTE]
+> This README reflects the design as documented so far. Before treating the tables as a cycle-accurate specification, confirm signal behavior and FSM transitions against the current RTL.
+
+---
+
+## Project Highlights
+
+- 8-bit accumulator-based CPU written entirely in Verilog HDL.
+- 16-instruction custom ISA covering arithmetic, logic, shifts, memory, branching, and I/O.
+- Shared 8-bit internal bus, with control signals on dedicated wires.
+- Multi-cycle FSM control unit using T-state sequencing.
+- 16 x 8 RAM initialized from a `.mem` file via `$readmemb`.
+- Zero and Carry flags with conditional jumps (`JZ`, `JC`).
+- External input with a confirm-to-continue handshake and a four-digit seven-segment output.
+- Clock divider for visible, step-by-step execution on hardware.
+- Targets the Real Digital Boolean board (Xilinx Spartan-7 `XC7S50-CSGA324-1`) using AMD Vivado.
+
+---
+
+## Specifications
+
+| Feature | Implementation |
+|---|---|
+| HDL | Verilog |
+| Architecture | Accumulator-based, shared bus |
+| Data width | 8 bits |
+| Program counter width | 4 bits |
+| Memory address width | 4 bits |
+| RAM | 16 x 8 bits |
+| Instruction width | 8 bits |
+| Opcode | Instruction bits `[7:4]` |
+| Operand | Instruction bits `[3:0]` |
+| Control | Multi-cycle FSM with T-state sequencing |
+| Instruction set | 16 instructions |
+| FPGA clock | 100 MHz board clock, divided for the CPU |
+| Output | Four-digit seven-segment display controller |
+| Program loading | `$readmemb` from a `.mem` file |
+| Target FPGA | Xilinx/AMD `XC7S50-CSGA324-1` |
+| Tool | AMD Vivado |
+
+---
+
+## Architecture Overview
+
+The CPU is split into a **datapath** and a **control unit**.
+
+- **Datapath:** PC, MAR, RAM, IR, A register, B register, ALU, flag register, input register, output register, and the shared bus.
+- **Control unit (CU):** decodes the current opcode and FSM state, then asserts control signals over dedicated wires.
+- **Shared bus:** carries 8-bit data between components. Control signals are separate wires and never travel over the data bus.
+- **Clock divider:** produces a slower CPU clock so execution can be observed on hardware.
+- **Display logic:** converts the output register to decimal digits and drives the seven-segment display.
+
+<p align="center">
+  <img src="images/architecture/block_diagram.png" alt="Architecture block diagram" width="900">
+</p>
+<p align="center"><b>Figure 1.</b> Top-level architecture of the 8-bit computer.</p>
+
+### Conceptual Data Flow
+
 ```text
                  +------------------+
                  |   Control Unit   |
@@ -51,306 +120,440 @@ Conceptual data flow
 +--------------------------------------------------------+
 |                       Datapath                         |
 |                                                        |
-| PC <-> MAR <-> RAM <-> IR                               |
+| PC <-> MAR <-> RAM <-> IR                              |
 |                  |                                     |
 |                  +---- Shared 8-bit data bus           |
-|                         |       |       |               |
-|                       A reg   B reg   Input reg         |
-|                         |       |       |               |
-|                         +--- ALU <------+               |
+|                         |       |       |              |
+|                       A reg   B reg   Input reg        |
+|                         |       |       |              |
+|                         +--- ALU <------+              |
 |                              |                         |
 |                         Flags / A reg                  |
 |                              |                         |
-|                         Output register                |
+|                         Output register               |
 +------------------------------+-------------------------+
                                |
                         Display controller
 ```
-The diagram is conceptual: the precise bus connections and control
-polarity are defined by the Verilog modules.
-3. Instruction Set Architecture (ISA)
-Every instruction is one byte:
+
+> [!NOTE]
+> The diagram is conceptual. Exact bus connections and control polarity are defined by the Verilog modules.
+
+### Shared Bus Behavior
+
+The CU picks the bus source and destination by asserting control signals:
+
+- `CO` puts the PC value on the bus.
+- `MI` makes the MAR capture the bus value.
+- `RO` puts RAM data on the bus.
+- `II` makes the IR capture the bus value.
+
+Only one source may drive the bus at a time in a tri-state implementation. If the bus is later replaced with a mux, the CU selects the mux source instead.
+
+---
+
+## Instruction Set Architecture (ISA)
+
+Every instruction is one byte. The upper nibble is the opcode. The lower nibble is a RAM address, an immediate value, or a jump target, depending on the instruction.
+
 ```text
   7             4 3             0
  +---------------+---------------+
  | Opcode (4 bit)| Operand (4 bit)|
  +---------------+---------------+
 ```
-The lower nibble is interpreted as a memory address, immediate value, or
-jump target depending on the instruction.
-Opcode	Mnemonic	Meaning
-`0000`	`NOP`	No operation
-`0001`	`LDA addr`	Load A from RAM: `A ← RAM[addr]`
-`0010`	`ADD addr`	Add RAM value to A: `A ← A + RAM[addr]`
-`0011`	`SUB addr`	Subtract RAM value from A: `A ← A − RAM[addr]`
-`0100`	`STA addr`	Store A in RAM: `RAM[addr] ← A`
-`0101`	`LDI imm`	Load the 4-bit immediate into A
-`0110`	`JMP addr`	Unconditional jump: `PC ← addr`
-`0111`	`JC addr`	Jump if carry flag is set
-`1000`	`JZ addr`	Jump if zero flag is set
-`1001`	`SFL`	Shift A left
-`1010`	`SFR`	Shift A right
-`1011`	`XRA addr`	XOR A with RAM value
-`1100`	`ANA addr`	AND A with RAM value
-`1101`	`INP`	Wait for/accept external input into A
-`1110`	`OUT`	Copy A to the output register
-`1111`	`HLT`	Halt instruction execution
-Instruction notes
-`LDA`, `ADD`, `SUB`, `STA`, `XRA`, and `ANA` use the low nibble as a
-RAM address.
-`LDI` uses the low nibble as a 4-bit immediate. The immediate is
-zero-extended to 8 bits when loaded into A.
-`JMP`, `JC`, and `JZ` use the low nibble as a 4-bit program address.
-`SFL` and `SFR` operate on the accumulator. Their exact
-shifted-out-bit and flag behavior depends on the ALU/flag RTL.
-`INP` accepts the external 8-bit input through the input register.
-In the current design, the `start` control is also used to confirm
-input while the FSM is waiting.
-`OUT` captures A into the output register for display.
-4. Control Signals
-The control unit drives these signals through dedicated control wires.
-They are not carried over the shared data bus.
+
+### Instruction Categories
+
+| Category | Instructions |
+|---|---|
+| Data transfer | `LDA`, `STA`, `LDI` |
+| Arithmetic | `ADD`, `SUB` |
+| Logic | `XRA`, `ANA` |
+| Shift | `SFL`, `SFR` |
+| Program control | `JMP`, `JC`, `JZ` |
+| Input / Output | `INP`, `OUT` |
+| System | `NOP`, `HLT` |
+
+### Instruction Reference
+
+| Opcode | Mnemonic | Operation |
+|---|---|---|
+| `0000` | `NOP` | No operation |
+| `0001` | `LDA addr` | `A <- RAM[addr]` |
+| `0010` | `ADD addr` | `A <- A + RAM[addr]` |
+| `0011` | `SUB addr` | `A <- A - RAM[addr]` |
+| `0100` | `STA addr` | `RAM[addr] <- A` |
+| `0101` | `LDI imm` | `A <- zero_extend(imm4)` |
+| `0110` | `JMP addr` | `PC <- addr` |
+| `0111` | `JC addr` | Jump if carry flag is set |
+| `1000` | `JZ addr` | Jump if zero flag is set |
+| `1001` | `SFL` | Shift A left |
+| `1010` | `SFR` | Shift A right |
+| `1011` | `XRA addr` | `A <- A XOR RAM[addr]` |
+| `1100` | `ANA addr` | `A <- A AND RAM[addr]` |
+| `1101` | `INP` | Wait for, then accept, external input into A |
+| `1110` | `OUT` | Copy A to the output register |
+| `1111` | `HLT` | Halt execution |
+
+### Instruction Notes
+
+- `LDA`, `ADD`, `SUB`, `STA`, `XRA`, `ANA` use the low nibble as a RAM address.
+- `LDI` uses the low nibble as a 4-bit immediate, zero-extended to 8 bits.
+- `JMP`, `JC`, `JZ` use the low nibble as a 4-bit program address.
+- `SFL` / `SFR` operate on the accumulator. Shifted-out-bit and flag behavior depend on the ALU/flag RTL.
+- `INP` takes the 8-bit external input through the input register. The `start` input also confirms the value while the FSM is waiting.
+- `OUT` captures A into the output register for display.
+
 ---
-Signal	Function
-`CO`	Enable PC value onto the bus
-`CL`	Load the PC from the bus
-`CE`	Increment the PC
-`OI`	Load the output register from the bus
-`BI`	Load the B register from the bus
-`SUB1`	Select ALU subtraction
-`ALO`	Enable ALU result onto the bus
-`AO`	Enable A-register value onto the bus
-`AI`	Load A register from the bus
-`IO`	Enable the instruction operand/immediate onto the bus
-`II`	Load the instruction register from the bus
-`RO`	Enable RAM data onto the bus
-`RI`	Write bus data into RAM
-`MI`	Load MAR from the bus
-`HLT1`	Halt the control unit / CPU execution
-`FE`	Capture ALU flags into the flag register
-`XRAE`	Select ALU XOR operation
-`ANAE`	Select ALU AND operation
-`INPI`	Enable input-register data onto the bus, according to the module's control convention
-`INPO`	Input-related control signal; confirm its exact role in the current `inp_reg` and CU RTL
-`SFL1`	Select ALU shift-left operation
-`SFR1`	Select ALU shift-right operation
-> Signal names such as `INPI` and `INPO` are project-specific. Check the
-> port directions in `inp_reg` and the CU before changing or documenting
-> their precise electrical meaning.
-Shared bus behavior
-The shared bus carries data, while the CU selects the source and
-destination by asserting controls. For example:
-`CO` makes the PC value available on the bus.
-`MI` makes the MAR capture the bus value.
-`RO` makes RAM data available on the bus.
-`II` makes the instruction register capture the bus value.
-Only one bus source should drive the bus at a time in a tri-state
-implementation. If the internal tri-state bus is later replaced with a
-mux, the control unit selects the mux source instead.
-5. T-State Sequencing
-The CPU uses a multi-cycle FSM. The common instruction fetch sequence
-is:
-T-state	Control signals	Micro-operation
-`T0`	`CO`, `MI`	`MAR ← PC`
-`T1`	`RO`, `II`	`IR ← RAM[MAR]`
-`T2`	`CE`	`PC ← PC + 1`
-After fetch, the CU decodes the opcode and executes the instruction
-using the relevant control sequence. The exact number of execution
-cycles depends on the instruction and FSM implementation.
-Execution micro-operations
-The table below summarizes the execution sequences discussed for the
-current RTL. Signals listed together are asserted in the same T-state.
+
+## Control Signals
+
+The CU drives these over dedicated wires, not over the shared bus.
+
+| Signal | Function |
+|---|---|
+| `CO` | Enable PC value onto the bus |
+| `CL` | Load PC from the bus |
+| `CE` | Increment PC |
+| `MI` | Load MAR from the bus |
+| `RO` | Enable RAM data onto the bus |
+| `RI` | Write bus data into RAM |
+| `II` | Load IR from the bus |
+| `IO` | Enable the IR operand/immediate onto the bus |
+| `AI` | Load A register from the bus |
+| `AO` | Enable A register onto the bus |
+| `BI` | Load B register from the bus |
+| `ALO` | Enable ALU result onto the bus |
+| `FE` | Capture ALU flags into the flag register |
+| `SUB1` | Select ALU subtraction |
+| `XRAE` | Select ALU XOR |
+| `ANAE` | Select ALU AND |
+| `SFL1` | Select ALU shift left |
+| `SFR1` | Select ALU shift right |
+| `OI` | Load output register from the bus |
+| `INPI` | Enable input-register data onto the bus (per the module's control convention) |
+| `INPO` | Input-related control; confirm its exact role in `inp_reg` and `cu` |
+| `HLT1` | Halt the control unit / CPU |
+
+> [!WARNING]
+> `INPI` and `INPO` are project-specific names. Check the port directions in `inp_reg` and `cu` before changing or documenting their exact meaning.
+
 ---
-Instruction	Execution sequence after fetch
-`NOP`	No datapath operation; proceed to next fetch
-`LDA addr`	`T3: IO, MI` → `MAR ← IR[3:0]`; `T4: RO, AI` → `A ← RAM[MAR]`
-`STA addr`	`T3: IO, MI` → `MAR ← IR[3:0]`; `T4: AO, RI` → `RAM[MAR] ← A`
-`ADD addr`	`T3: IO, MI`; `T4: RO, BI`; `T5: ALO, AI, FE` → A captures ALU result and flags capture
-`SUB addr`	`T3: IO, MI`; `T4: RO, BI`; `T5: SUB1, ALO, AI, FE`
-`LDI imm`	`IO, AI` → `A ← zero_extend(IR[3:0])`
-`JMP addr`	`IO, CL` → `PC ← IR[3:0]`
-`JC addr`	If carry is set: `IO, CL`; otherwise continue to next fetch
-`JZ addr`	If zero is set: `IO, CL`; otherwise continue to next fetch
-`XRA addr`	`T3: IO, MI`; `T4: RO, BI`; select ALU XOR; `ALO, AI, FE` captures result/flags
-`ANA addr`	`T3: IO, MI`; `T4: RO, BI`; select ALU AND; `ALO, AI, FE` captures result/flags
-`SFL`	Select shift-left; enable ALU result to bus and load A; update flags if enabled by CU
-`SFR`	Select shift-right; enable ALU result to bus and load A; update flags if enabled by CU
-`INP`	Enter input-wait state; when confirmed, enable external input path and load A
-`OUT`	`AO, OI` → `OUTREG ← A`
-`HLT`	Assert halt control and remain halted
-Important: This is a readable summary, not a substitute for the
-exact CU case statement. Confirm the precise state where `LDI`, jumps,
-shifts, and `INP` assert their controls by checking the current `cu`
-module.
-6. ALU and Flags
-The ALU operates on the A and B register values and supports:
+
+## Instruction Execution (T-States)
+
+### Fetch (common to all instructions)
+
+| T-state | Signals | Micro-operation |
+|---|---|---|
+| `T0` | `CO`, `MI` | `MAR <- PC` |
+| `T1` | `RO`, `II` | `IR <- RAM[MAR]` |
+| `T2` | `CE` | `PC <- PC + 1` |
+
+### Execute
+
+Signals listed together are asserted in the same T-state.
+
+| Instruction | Execution sequence after fetch |
+|---|---|
+| `NOP` | No datapath operation; go to next fetch |
+| `LDA addr` | `T3: IO, MI` then `T4: RO, AI` |
+| `STA addr` | `T3: IO, MI` then `T4: AO, RI` |
+| `ADD addr` | `T3: IO, MI`, `T4: RO, BI`, `T5: ALO, AI, FE` |
+| `SUB addr` | `T3: IO, MI`, `T4: RO, BI`, `T5: SUB1, ALO, AI, FE` |
+| `XRA addr` | `T3: IO, MI`, `T4: RO, BI`, then `XRAE, ALO, AI, FE` |
+| `ANA addr` | `T3: IO, MI`, `T4: RO, BI`, then `ANAE, ALO, AI, FE` |
+| `LDI imm` | `IO, AI` |
+| `JMP addr` | `IO, CL` |
+| `JC addr` | If carry set: `IO, CL`; otherwise next fetch |
+| `JZ addr` | If zero set: `IO, CL`; otherwise next fetch |
+| `SFL` / `SFR` | Select shift, `ALO, AI`; update flags if enabled by the CU |
+| `INP` | Enter input-wait state; on confirm, enable input path and load A |
+| `OUT` | `AO, OI` |
+| `HLT` | Assert halt and stay halted |
+
+> [!IMPORTANT]
+> This is a readable summary, not a substitute for the exact `cu` case statement. Confirm the state in which `LDI`, jumps, shifts, and `INP` assert their controls against the current RTL.
+
 ---
-Operation select	Operation
-`SUB1 = 0`, `XRAE = 0`, `ANAE = 0`, shift selects low	Addition: `A + B`
-`SUB1 = 1`	Subtraction: `A − B`
-`XRAE = 1`	Bitwise XOR
-`ANAE = 1`	Bitwise AND
-`SFL1 = 1`	Shift left
-`SFR1 = 1`	Shift right
-Only the intended operation select should be active at a time. The
-precise ALU priority must match the `case`/conditional logic in `alu`.
-Flags
-Zero flag (`flag_z`): Indicates whether the ALU result is zero.
-Carry flag (`flag_c`): Stores the carry/borrow-related result as
-defined by the ALU implementation.
-Flag register (`flag_reg`): Captures flag values when `FE` is
-asserted.
-`JC` tests the carry flag; `JZ` tests the zero flag. For subtraction,
-verify whether the implementation defines the carry-related output as
-borrow or no-borrow before explaining it as an arithmetic convention.
-7. RTL Module Structure
-The design is assembled from small Verilog modules.
+
+## ALU and Flags
+
+The ALU operates on the A and B register values.
+
+| Operation select | Operation |
+|---|---|
+| All selects low | Addition: `A + B` |
+| `SUB1 = 1` | Subtraction: `A - B` |
+| `XRAE = 1` | Bitwise XOR |
+| `ANAE = 1` | Bitwise AND |
+| `SFL1 = 1` | Shift left |
+| `SFR1 = 1` | Shift right |
+
+Only one operation select should be active at a time. The exact priority must match the `case` / conditional logic in `alu`.
+
+### Flags
+
+| Flag | Meaning |
+|---|---|
+| `flag_z` | Set when the ALU result is zero |
+| `flag_c` | Carry (or borrow-related) result, as defined by the ALU |
+
+- `flag_reg` captures both flags when `FE` is asserted.
+- `JC` tests carry and `JZ` tests zero.
+- For subtraction, verify whether the carry output means borrow or no-borrow before documenting it as an arithmetic convention.
+
 ---
-Module	Responsibility
-`cpu`	Top-level integration of CPU datapath, CU, clock divider, and display
-`clk_div`	Divides the board clock to produce a slower CPU clock
-`pc`	4-bit program counter: output, increment, load, reset
-`mar`	Holds the 4-bit RAM address
-`ram`	16 × 8-bit memory, with program initialization from `.mem`
-`ir`	Holds the fetched 8-bit instruction and exposes opcode/operand fields
-`a_reg`	8-bit accumulator
-`b_reg`	8-bit second ALU operand register
-`alu`	Arithmetic, logical, and shift operations
-`flag_reg`	Stores zero and carry-related flags
-`inp_reg`	Interfaces external input to the internal datapath
-`out_reg`	Captures CPU output for display
-`cu`	FSM and opcode decode; generates datapath control signals
-`disp_ctrl`	Scans display digits and converts output to decimal digits
-`segment_7`	Converts a BCD digit to seven-segment patterns
-Top-level interface
-The current top-level interface discussed for FPGA use is:
+
+## RTL Module Structure
+
+```mermaid
+graph TD
+    TOP["cpu (top)"] --> CLK["clk_div"]
+    TOP --> CU["cu"]
+    TOP --> PC["pc"]
+    TOP --> MAR["mar"]
+    TOP --> RAM["ram"]
+    TOP --> IR["ir"]
+    TOP --> A["a_reg"]
+    TOP --> B["b_reg"]
+    TOP --> ALU["alu"]
+    TOP --> FLAG["flag_reg"]
+    TOP --> INP["inp_reg"]
+    TOP --> OUT["out_reg"]
+    TOP --> DISP["disp_ctrl"]
+    DISP --> SEG["segment_7"]
+```
+
+| Module | Responsibility |
+|---|---|
+| `cpu` | Top-level integration of datapath, CU, clock divider, and display |
+| `clk_div` | Divides the board clock to produce a slow CPU clock |
+| `pc` | 4-bit program counter: output, increment, load, reset |
+| `mar` | Holds the 4-bit RAM address |
+| `ram` | 16 x 8 memory, initialized from `.mem` |
+| `ir` | Holds the fetched instruction; exposes opcode and operand fields |
+| `a_reg` | 8-bit accumulator |
+| `b_reg` | 8-bit second ALU operand register |
+| `alu` | Arithmetic, logic, and shift operations |
+| `flag_reg` | Stores zero and carry flags |
+| `inp_reg` | Interfaces external input to the datapath |
+| `out_reg` | Captures CPU output for display |
+| `cu` | FSM and opcode decode; generates control signals |
+| `disp_ctrl` | Scans display digits and converts output to decimal |
+| `segment_7` | Converts a BCD digit to seven-segment patterns |
+
+### Top-Level Interface
+
 ```verilog
 module cpu(
     ext_inp, start, clk, rst,
     D0_AN, D0_SEG
 );
 ```
-`clk`: board clock (100 MHz).
-`rst`: reset input.
-`start`: starts CPU execution and is also used to confirm input when
-the CPU waits for `INP`.
-`ext_inp[7:0]`: external input data.
-`D0_AN` and `D0_SEG`: digit-select and segment outputs for the
-display.
-The display controller should use the fast board clock for refresh,
-while the CPU's sequential datapath and RAM use the divided CPU clock
-(`clkf`).
-8. RAM and Program Initialization
-The memory contains 16 locations, each 8 bits wide. The 4-bit address
-allows locations `0` through `F`.
-The RAM module initializes the program using a memory file, typically
-with:
+
+| Port | Description |
+|---|---|
+| `clk` | 100 MHz board clock |
+| `rst` | Reset input |
+| `start` | Starts execution; also confirms input while the CPU waits on `INP` |
+| `ext_inp[7:0]` | External input data |
+| `D0_AN`, `D0_SEG` | Digit-select and segment outputs for the display |
+
+---
+
+## RAM and Program Initialization
+
+- 16 locations, 8 bits each; addresses `0` to `F`.
+- The program is loaded with:
+
 ```verilog
 $readmemb("fibonacci.mem", ram);
 ```
-The memory file should contain one 8-bit binary instruction/data value
-per line, in the address order expected by the RAM module. The `.mem`
-file must be included in the Vivado project and be available to the
-simulation and synthesis flow.
-RAM should not be cleared by the CPU reset if the same memory is used to
-hold the program and data. Reset the CPU registers and control state
-separately.
-9. Clocking and Reset
-The board clock is 100 MHz.
-The clock divider produces a slow CPU clock for visible step-by-step
-execution.
-The RAM and CPU registers must use the intended CPU clock
-consistently.
-The display refresh logic should use the original fast board clock
-to avoid visible flicker.
-Check whether reset is active-high or active-low in the board wiring
-and XDC. The RTL and physical button polarity must agree.
-Reset should clear the PC, instruction/working registers, flags,
-output register, and CU state as designed, while preserving
-initialized program RAM.
-A common debugging symptom is that the display resets but execution
-resumes from an old state. In that case, verify that the PC,
-accumulator, flags, IR, and CU all receive the same effective reset.
-10. Example: Fibonacci Program
-The following memory layout is the Fibonacci program previously
-discussed for this CPU. It uses the low nibble as the address field and
-stores working values in RAM locations `D`, `E`, and `F`.
-```text
-| Address | Binary | Meaning |
-|---|---|---|
-| `0` | `00011110` | `LDA E` |
-| `1` | `11100000` | `OUT` |
-| `2` | `00111101` | `ADD D` |
-| `3` | `10111100` | `JC C` |
-| `4` | `11100000` | `OUT` |
-| `5` | `00101111` | `STA F` |
-| `6` | `00011110` | `LDA E` |
-| `7` | `00101101` | `STA D` |
-| `8` | `00011111` | `LDA F` |
-| `9` | `00101110` | `STA E` |
-| `A` | `10100010` | `JMP 2` |
-| `B` | `00000000` | `NOP` |
-| `C` | `11110000` | `HLT` |
-| `D` | `00000000` | Previous value |
-| `E` | `00000001` | Current value |
-| `F` | `00000000` | Temporary value |
+
+- The `.mem` file holds one 8-bit binary value per line, in address order.
+- Add the `.mem` file to the Vivado project so it is available to both simulation and synthesis.
+- Do **not** clear RAM on CPU reset if it holds the program and data. Reset CPU registers and control state separately.
+
+---
+
+## Clocking and Reset
+
+- The board clock is 100 MHz. The divider produces a slow CPU clock (`clkf`) for visible execution.
+- The CPU registers and RAM must all use the same CPU clock.
+- The display refresh logic must use the fast board clock to avoid flicker.
+- Confirm whether reset is active-high or active-low in both the RTL and the XDC wiring.
+- Reset should clear the PC, IR/working registers, flags, output register, and CU state, while preserving the initialized program RAM.
+
+> [!TIP]
+> **Debug hint:** if the display resets but execution resumes from an old state, check that the PC, accumulator, flags, IR, and CU all receive the same effective reset.
+
+---
+
+## Example Program: Fibonacci
+
+Working values live in RAM locations `D`, `E`, and `F`.
+
+| Address | Assembly | Machine code | Hex |
+|---|---|---|---|
+| `0` | `LDA E` | `0001 1110` | `1E` |
+| `1` | `OUT` | `1110 0000` | `E0` |
+| `2` | `ADD D` | `0010 1101` | `2D` |
+| `3` | `JC C` | `0111 1100` | `7C` |
+| `4` | `OUT` | `1110 0000` | `E0` |
+| `5` | `STA F` | `0100 1111` | `4F` |
+| `6` | `LDA E` | `0001 1110` | `1E` |
+| `7` | `STA D` | `0100 1101` | `4D` |
+| `8` | `LDA F` | `0001 1111` | `1F` |
+| `9` | `STA E` | `0100 1110` | `4E` |
+| `A` | `JMP 2` | `0110 0010` | `62` |
+| `B` | `NOP` | `0000 0000` | `00` |
+| `C` | `HLT` | `1111 0000` | `F0` |
+| `D` | data (previous) | `0000 0000` | `00` |
+| `E` | data (current) | `0000 0001` | `01` |
+| `F` | data (temporary) | `0000 0000` | `00` |
+
+Outputs Fibonacci values through the output register. Because arithmetic is 8-bit, the carry flag stops the program before an overflowing sum is used.
+
+> [!NOTE]
+> Confirm the actual output sequence and halt behavior in simulation for the current program and CU.
+
+---
+
+## Simulation and Verification
+
+Recommended checks for the testbench and waveforms:
+
+- [ ] Reset puts the PC at `0` and initializes CPU state.
+- [ ] `T0` places PC on the bus and loads MAR.
+- [ ] `T1` fetches RAM data into IR.
+- [ ] `T2` increments the PC.
+- [ ] Opcode and operand decode correctly.
+- [ ] Memory instructions use the operand as the MAR address.
+- [ ] ALU instructions load B, select the right operation, and update A and flags.
+- [ ] `JC` / `JZ` branch only when their flag condition holds.
+- [ ] `INP` waits for confirmation, then loads external input.
+- [ ] `OUT` captures A and updates the display.
+- [ ] `HLT` stops further execution.
+- [ ] Reset clears CPU state even with the slow CPU clock.
+
+**Useful signals to probe:** `clkf`, `bus`, `opcode`, `addr`, PC/MAR, A/B, `alu_result`, `flag_z`, `flag_c`, CU state, and the control wires.
+
+<p align="center">
+  <img src="images/waveforms/fibonacci_waveform.png" alt="Fibonacci simulation waveform" width="1000">
+</p>
+<p align="center"><b>Figure 2.</b> Simulation waveform of the Fibonacci program.</p>
+
+---
+
+## FPGA Implementation
+
+| Item | Detail |
+|---|---|
+| Board | Real Digital Boolean |
+| Device | Xilinx/AMD `XC7S50-CSGA324-1` |
+| Tool | AMD Vivado |
+| Clock | 100 MHz, constrained in the XDC |
+| Display | Four-digit seven-segment, pins assigned in the XDC |
+
+Pin constraints and I/O standards must match the board's official master constraints and the current top-level port names.
+
+```mermaid
+flowchart LR
+    A["RTL Design"] --> B["Simulation"]
+    B --> C["Synthesis"]
+    C --> D["Implementation"]
+    D --> E["Timing Analysis"]
+    E --> F["Bitstream"]
+    F --> G["Boolean Board"]
 ```
-This program is intended to output Fibonacci values through the output
-register. Because the arithmetic is 8-bit, the carry flag is used to
-stop before continuing with an overflowing sum. Confirm the actual
-output sequence and halt behavior in simulation for the exact current
-program and CU implementation.
-11. Simulation and Verification
-Recommended checks for the testbench and waveform:
-Reset puts the PC at address `0` and initializes the CPU's state as
-expected.
-`T0` places the PC address on the bus and loads MAR.
-`T1` fetches RAM data into IR.
-`T2` increments the PC.
-The opcode and operand decode correctly.
-Memory instructions use the operand as the MAR address.
-ALU instructions load B, select the correct operation, and update
-A/flags.
-`JC` and `JZ` branch only when their respective flags satisfy the
-condition.
-`INP` waits for the input-confirmation action and then loads
-external input.
-`OUT` captures A and updates the displayed value.
-`HLT` prevents further instruction execution.
-Reset clears CPU state even if the CPU clock is slow.
-Useful signals to inspect include `clkf`, `bus`, `opcode`, `addr`,
-PC/MAR values, A/B outputs, `alu_result`, `flag_z`, `flag_c`, CU state,
-and the relevant control wires.
-12. FPGA Target and Tools
-FPGA board: Real Digital Boolean development board.
-FPGA device discussed: Xilinx/AMD `XC7S50-CSGA324-1`.
-Tool: AMD Vivado.
-Clock: 100 MHz board clock, constrained in the XDC.
-Display: Four-digit seven-segment display, with digit and
-segment pins assigned in the project's XDC.
-The exact pin constraints and I/O standards must match the board's
-official master constraints and the current top-level port names.
-13. Current Design Scope and Possible Extensions
-The current project demonstrates:
-Modular RTL design in Verilog
-A custom 8-bit instruction set
-A shared internal data bus
-A multi-cycle control FSM
-RAM-based instruction and data storage
-ALU operations and condition flags
-Conditional and unconditional branches
-External input and output
-FPGA clock division and seven-segment display output
-Potential future extensions include a mux-based internal bus, additional
-instructions, improved input debouncing, breakpoint/trace support, and a
-more advanced CPU architecture. These are extensions, not claims about
-the current implementation.
-14. Conclusion
-This project builds a small 8-bit computer from explicit RTL modules.
-The control unit sequences fetch and execution through T-states, while
-independent control wires coordinate data transfers over the shared bus.
-The PC, RAM, IR, registers, ALU, and flags implement the datapath, and
-the output register connects CPU results to the FPGA display.
-The project provides a practical foundation for understanding
-instruction execution, FSM-based control, bus transfers, Verilog
-simulation, and FPGA implementation.
+
+<!-- Add Vivado timing/power/utilization numbers here once finalized. -->
+
+---
+
+## Repository Structure
+
+```text
+8-bit-computer/
+│
+├── constraints/        # XDC constraint files
+├── docs/               # Extended documentation
+├── images/
+│   ├── architecture/   # Block diagrams
+│   ├── fpga/           # Vivado screenshots
+│   └── waveforms/      # Simulation waveforms
+├── rtl/                # Verilog source files
+├── mem/                # Program .mem files (e.g. fibonacci.mem)
+├── tb/                 # Testbenches
+│
+├── README.md
+└── LICENSE
+```
+
+> [!NOTE]
+> Adjust folder names to match your actual repository layout.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- AMD Vivado
+- Basic Verilog knowledge
+- Real Digital Boolean board (for hardware testing)
+
+### Clone
+
+```bash
+git clone https://github.com/<username>/<repo-name>.git
+cd <repo-name>
+```
+
+### Build and Run
+
+1. Open Vivado and create a project targeting `XC7S50-CSGA324-1`.
+2. Add the sources from `rtl/` and the `.mem` file from `mem/`.
+3. Add the constraint file from `constraints/`.
+4. Run simulation with the testbench from `tb/`.
+5. Run synthesis, implementation, and generate the bitstream.
+6. Program the board, set `ext_inp`, and use `start` to run and to confirm `INP`.
+
+---
+
+## Future Improvements
+
+- Mux-based internal bus in place of tri-state.
+- Additional instructions (multiply, rotate, compare).
+- Improved input debouncing.
+- Breakpoint and trace support.
+- Stack pointer with `CALL` / `RET`.
+- UART interface and larger memory.
+- A more advanced pipelined architecture.
+
+> These are extensions, not claims about the current implementation.
+
+---
+
+## Authors
+
+<p align="center">
+  <!-- Replace with your team names -->
+  Name 1 • Name 2 • Name 3
+</p>
+
+---
+
+## Acknowledgements
+
+- **Albert Paul Malvino**, for the SAP (Simple-As-Possible) architecture.
+- **Ben Eater**, for popularizing SAP-style computer builds.
+- **AMD Xilinx**, for the Vivado Design Suite.
+
+---
+
+## License
+
+Released under the MIT License. See [`LICENSE`](LICENSE) for details.
