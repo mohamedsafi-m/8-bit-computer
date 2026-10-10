@@ -236,10 +236,6 @@ The CU drives these over dedicated wires, not over the shared bus.
 | `INPO` | Input-related control; confirm its exact role in `inp_reg` and `cu` |
 | `HLT1` | Halt the control unit / CPU |
 
-> [!WARNING]
-> `INPI` and `INPO` are project-specific names. Check the port directions in `inp_reg` and `cu` before changing or documenting their exact meaning.
-
----
 
 ## Instruction Execution (T-States)
 
