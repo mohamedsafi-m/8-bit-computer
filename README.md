@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="images/banner/project_banner.png" alt="8-Bit Computer Banner" width="100%">
-</p>
-
 <h1 align="center">8-Bit Computer in Verilog</h1>
 
 <p align="center">
