@@ -97,9 +97,6 @@ The CPU is split into a **datapath** and a **control unit**.
 - **Clock divider:** produces a slower CPU clock so execution can be observed on hardware.
 - **Display logic:** converts the output register to decimal digits and drives the seven-segment display.
 
-<p align="center">
-  <img src="images/architecture/block_diagram.png" alt="Architecture block diagram" width="900">
-</p>
 <p align="center"><b>Figure 1.</b> Top-level architecture of the 8-bit computer.</p>
 
 ### Conceptual Data Flow
