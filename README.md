@@ -226,7 +226,6 @@ The CU drives these over dedicated wires, not over the shared bus.
 | `SFR1` | Select ALU shift right |
 | `OI` | Load output register from the bus |
 | `INPI` | Enable input-register data onto the bus (per the module's control convention) |
-| `INPO` | Input-related control; confirm its exact role in `inp_reg` and `cu` |
 | `HLT1` | Halt the control unit / CPU |
 
 
