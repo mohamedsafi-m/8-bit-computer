@@ -481,6 +481,10 @@ flowchart LR
 > Adjust folder names to match your actual repository layout.
 
 ---
+<p align="center">
+  <img src="schematic/schematic_8bit.png" alt="schematic of cpu" width="1000">
+</p>
+<p align="center"><b>Figure 3.</b> Schematic of CPU.</p>
 
 ## Getting Started
 
