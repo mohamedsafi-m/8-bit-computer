@@ -535,16 +535,6 @@ cd <repo-name>
 
 > These are extensions, not claims about the current implementation.
 
----
-
-## Authors
-
-<p align="center">
-  <!-- Replace with your team names -->
-  Name 1 • Name 2 • Name 3
-</p>
-
----
 
 ## Acknowledgements
 
