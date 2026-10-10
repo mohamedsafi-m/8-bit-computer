@@ -474,15 +474,11 @@ flowchart LR
 ```text
 8-bit-computer/
 │
-├── constraints/        # XDC constraint files
-├── docs/               # Extended documentation
-├── images/
-│   ├── architecture/   # Block diagrams
-│   ├── fpga/           # Vivado screenshots
-│   └── waveforms/      # Simulation waveforms
+├── constraints/        # XDC constraint file
+├── simulation/
+├── schematic/
 ├── rtl/                # Verilog source files
-├── mem/                # Program .mem files (e.g. fibonacci.mem)
-├── tb/                 # Testbenches
+├── memory-files/                # Program .mem files (e.g. fibonacci.mem)
 │
 ├── README.md
 └── LICENSE
