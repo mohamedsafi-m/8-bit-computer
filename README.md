@@ -430,7 +430,7 @@ Recommended checks for the testbench and waveforms:
 **Useful signals to probe:** `clkf`, `bus`, `opcode`, `addr`, PC/MAR, A/B, `alu_result`, `flag_z`, `flag_c`, CU state, and the control wires.
 
 <p align="center">
-  <img src="images/waveforms/fibonacci_waveform.png" alt="Fibonacci simulation waveform" width="1000">
+  <img src="simulation/fibonacci_waveform.png" alt="Fibonacci simulation waveform" width="1000">
 </p>
 <p align="center"><b>Figure 2.</b> Simulation waveform of the Fibonacci program.</p>
 
